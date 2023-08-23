@@ -240,7 +240,27 @@ class FullyConnectedNet(object):
         # self.bn_params[1] to the forward pass for the second batch normalization #
         # layer, etc.                                                              #
         ############################################################################
+        input = X
+        cache = {}
+        outR = outd = None
+        for i in range(self.num_layers):
+            outA, cache_i = affine_forward(input, self.params['W' + str(i + 1)], self.params['b' + str(i + 1)])
+            input = outA
+            cache['cache_affine_' + str(i + 1)] = cache_i
+            if use_batchnorm:
+                outbn, cachebn = batchnorm_forward(input, self.params['W' + str(i + 1)], self.params['b' + str(i + 1)], self.bn_params[i])
+                cache['cache_BN_' + str(i + 1)] = cachebn
+            input = outbn
+            outR, cacheR = relu_forward(input)
+            cache['cache_relu_' + str(i + 1)] = cacheR
+            if use_dropout:
+                outd, cached = dropout_forward(input, dropout_param)
+                input = outd
+                cache['cache_dropout_' + str(i + 1)] = cached
+        input = outR if usedropout else outd
+        out, cacheA = affine_forward(input, self.params['W' + str(i + 1)], self.params['b' + str(i + 1)])
         
+                
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
@@ -264,7 +284,9 @@ class FullyConnectedNet(object):
         # automated tests, make sure that your L2 regularization includes a factor #
         # of 0.5 to simplify the expression for the gradient.                      #
         ############################################################################
-        pass
+        loss, doutA = softmax(out, y)
+        dx, grad[''], grad['']= affine_backward(dout, cacheA)
+        
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
