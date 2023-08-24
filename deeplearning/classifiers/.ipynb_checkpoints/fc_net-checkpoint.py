@@ -226,7 +226,7 @@ class FullyConnectedNet(object):
         if self.use_batchnorm:
             for bn_param in self.bn_params:
                 bn_param[mode] = mode
-
+        
         scores = None
         ############################################################################
         # TODO: Implement the forward pass for the fully-connected net, computing  #
@@ -243,23 +243,26 @@ class FullyConnectedNet(object):
         input = X
         cache = {}
         outR = outd = None
-        for i in range(self.num_layers):
-            outA, cache_i = affine_forward(input, self.params['W' + str(i + 1)], self.params['b' + str(i + 1)])
+        for i in range(1, self.num_layers ):
+            outA, cache_i = affine_forward(input, self.params['W' + str(i )], self.params['b' + str(i )])
             input = outA
-            cache['cache_affine_' + str(i + 1)] = cache_i
-            if use_batchnorm:
-                outbn, cachebn = batchnorm_forward(input, self.params['W' + str(i + 1)], self.params['b' + str(i + 1)], self.bn_params[i])
-                cache['cache_BN_' + str(i + 1)] = cachebn
-            input = outbn
+            cache['cache_affine_' + str(i)] = cache_i
+            
+            if self.use_batchnorm:
+                outbn, cachebn = batchnorm_forward(input, self.params['gamma' + str(i)], self.params['beta' + str(i)], self.bn_params[i])
+                cache['cache_BN_' + str(i)] = cachebn
+                input = outbn
+                
             outR, cacheR = relu_forward(input)
-            cache['cache_relu_' + str(i + 1)] = cacheR
-            if use_dropout:
+            cache['cache_relu_' + str(i)] = cacheR
+            input = outR
+            
+            if self.use_dropout:
                 outd, cached = dropout_forward(input, dropout_param)
                 input = outd
-                cache['cache_dropout_' + str(i + 1)] = cached
-        input = outR if usedropout else outd
-        out, cacheA = affine_forward(input, self.params['W' + str(i + 1)], self.params['b' + str(i + 1)])
-        
+                cache['cache_dropout_' + str(i)] = cached
+                
+        scores, cacheA = affine_forward(input, self.params['W' + str(self.num_layers)], self.params['b' + str(self.num_layers)])
                 
         ############################################################################
         #                             END OF YOUR CODE                             #
@@ -284,9 +287,25 @@ class FullyConnectedNet(object):
         # automated tests, make sure that your L2 regularization includes a factor #
         # of 0.5 to simplify the expression for the gradient.                      #
         ############################################################################
-        loss, doutA = softmax(out, y)
-        dx, grad[''], grad['']= affine_backward(dout, cacheA)
-        
+        loss, doutA = softmax_loss(scores, y)
+        dx, grads['W' + str(self.num_layers )], grads['b' + str(self.num_layers )]= affine_backward(doutA, cacheA)
+        loss += 0.5* self.reg * np.sum(self.params['W' + str(self.num_layers)]**2)
+        grads['W' + str(self.num_layers)]+= self.reg * self.params['W' + str(self.num_layers)]
+        for i in range(1, self.num_layers):
+            layer = self.num_layers - i
+            W = 'W' + str(layer)
+            b = 'b' + str(layer)
+            gamma = 'gamma' + str(layer)
+            beta = 'beta' + str(layer)
+            if self.use_dropout:
+                dx = dropout_backward(dx, cache['cache_dropout_' + str(layer)])
+            dx = relu_backward(dx, cache['cache_relu_' + str(layer)])
+            if self.use_batchnorm:
+                dx, grads[gamma], grads[beta] = batchnorm_backward(dx, cache['cache_BN_' + str(layer)])
+            dx, grads[W], grads[b] = affine_backward(dx, cache['cache_affine_' +str(layer)])
+            loss += 0.5 * self.reg * np.sum(self.params[W]**2)
+            grads[W] += self.reg * self.params[W]
+            
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
