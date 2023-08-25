@@ -66,7 +66,7 @@ def sgd_momentum(w, dw, config=None):
     # the updated value in the next_w variable. You should also use and update  #
     # the velocity v.                                                           # 
     #############################################################################
-    pass
+    next_w = w - config['learning_rate'] * (dw + v)
     #############################################################################
     #                             END OF YOUR CODE                              #
     #############################################################################
@@ -93,13 +93,15 @@ def rmsprop(x, dx, config=None):
     config.setdefault('epsilon', 1e-8)
     config.setdefault('cache', np.zeros_like(x))
 
-    next_x = None
+
     #############################################################################
     # TODO: Implement the RMSprop update formula, storing the next value of x   #
     # in the next_x variable. Don't forget to update cache value stored in      #
     # config['cache'] and to use the epsilon scalar to avoid dividing by zero.  #
     #############################################################################
-    pass
+    config['cache'] = config['decay_rate'] * config['cache'] + (1- config['decay_rate']) * dx ** 2
+    denom = np.sqrt(config['cache'] + config['epsilon'])
+    next_x = x  - config['learning_rate'] * (1/denom) * dx
     #############################################################################
     #                             END OF YOUR CODE                              #
     #############################################################################
@@ -132,13 +134,20 @@ def adam(x, dx, config=None):
 
     next_x = None
     #############################################################################
-    # TODO: Implement the Adam update formula, storing the next value of x in   #
+    # Implement the Adam update formula, storing the next value of x in         #
     # the next_x variable. Don't forget to update the m, v, and t variables     #
     # stored in config and to use the epsilon scalar to avoid dividing by zero. #
     #############################################################################
-    pass
+    m = config['m']
+    v = config['v']
+    config['t'] += 1
+    m = (1 - config['beta1']) * dx + config['beta1'] * m
+    v = (1 - config['beta2']) * (dx ** 2) + config['beta2'] * v
+    m_k_hat = m / ( 1 - config['beta1'] ** config['t'])
+    v_k_hat = v / (1 - config['beta2'] ** config['t'])
+    next_x = x - config['learning_rate'] * m_k_hat / (np.sqrt(v_k_hat + config['epsilon']))
     #############################################################################
-    #                             END OF YOUR CODE                              #
+    #                                                                           #
     #############################################################################
 
     return next_x, config
